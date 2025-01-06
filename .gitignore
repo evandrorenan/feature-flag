@@ -11,3 +11,4 @@ target/
 generated/
 generated-code/
 *.iml #intellij module file
+feature-flag.iml
