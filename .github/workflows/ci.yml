@@ -29,7 +29,9 @@ jobs:
 
       - name: Download JAR from GitHub Packages
         run: |
-          curl -L https://github.com/evandrorenan/feature-flag-sdk-springboot/releases/download/${{ env.FEATURE_FLAG_SDK_VERSION }}/feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar -o feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar
+          curl -L https://github.com/evandrorenan/feature-flag-sdk-springboot/releases/download/${{ env.FEATURE_FLAG_SDK_VERSION }}/feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar \
+            -H 'authorization: Basic ${{ secrets.GITHUB_TOKEN }} '
+            -o feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar
 
       - name: Install JAR to Maven Local Repository
         run: |
