@@ -21,7 +21,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Extract feature-flag-sdk-springboot version from pom.xml
-        id: extract_version
+        id: extract_sdk_version
         run: |
           VERSION=$(grep -A 1 '<artifactId>feature-flag-sdk-springboot</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
           echo "FEATURE_FLAG_SDK_VERSION=$VERSION" >> $GITHUB_ENV
@@ -47,14 +47,21 @@ jobs:
       - name: Run tests with JUnit
         run: mvn test
 
+      - name: Extract feature-flag-sdk-springboot version from pom.xml
+        id: extract_version
+        run: |
+          VERSION=$(grep -A 1 '<artifactId>feature-flag</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
+          echo "FEATURE_FLAG_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Feature flag version: $VERSION"
+
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_SDK_VERSION }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} .
 
       - name: Push Docker image to Docker Hub
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.VERSION }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }}
 
       - name: Deploy to Kubernetes
         run: |
