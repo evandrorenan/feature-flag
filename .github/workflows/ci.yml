@@ -49,7 +49,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.VERSION }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_SDK_VERSION }} .
 
       - name: Push Docker image to Docker Hub
         run: |
