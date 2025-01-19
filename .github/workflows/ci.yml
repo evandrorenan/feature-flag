@@ -65,11 +65,13 @@ jobs:
 
       - name: Setup KUBECONFIG
         run: |
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
+          export KUBECONFIG="${{ secrets.KUBECONFIG }}"
+
+      - name: Validate KUBECONFIG
+        run: kubectl config view
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.VERSION }} --record
+          kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
         env:
           KUBECONFIG: $PWD/kubeconfig
