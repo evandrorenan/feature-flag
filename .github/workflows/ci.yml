@@ -66,8 +66,6 @@ jobs:
       - name: Setup KUBECONFIG
         run: |
           echo "${{ secrets.KUBECONFIG }}" > kubeconfig
-          cat kubeconfig | base64 
-          cat kubeconfig | base64 -d
 
       - name: Validate KUBECONFIG
         env:
