@@ -80,16 +80,16 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }}
 
       - name: Setup KUBECONFIG
-        run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig
-
-      - name: Validate KUBECONFIG
         env:
-          KUBECONFIG: $PWD/kubeconfig
-        run: kubectl config view
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG" > kubeconfig.yaml
+          export KUBECONFIG=$PWD/kubeconfig.yaml
+          kubectl config use-context kind-web3270
 
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
+          kubectl rollout status deployment/feature-flag
         env:
           KUBECONFIG: $PWD/kubeconfig
