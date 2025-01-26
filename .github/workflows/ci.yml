@@ -19,6 +19,15 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
       - name: Extract feature-flag-sdk-springboot version from pom.xml
         id: extract_sdk_version
@@ -27,7 +36,14 @@ jobs:
           echo "FEATURE_FLAG_SDK_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Feature flag SDK version: $VERSION"
 
+      - name: Cache feature-flag-sdk-springboot JAR
+        uses: actions/cache@v3
+        with:
+          path: feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar
+          key: ${{ runner.os }}-sdk-${{ env.FEATURE_FLAG_SDK_VERSION }}
+
       - name: Download JAR from GitHub Packages
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           curl -L "https://maven.pkg.github.com/evandrorenan/feature-flag-sdk-springboot/br/com/evandrorenan/feature-flag-sdk-springboot/${{ env.FEATURE_FLAG_SDK_VERSION }}/feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -73,7 +89,7 @@ jobs:
         run: kubectl config view
 
       - name: Deploy to Kubernetes
-        run: |  
+        run: |
           kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
         env:
           KUBECONFIG: $PWD/kubeconfig
