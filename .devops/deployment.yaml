@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-flag
+  namespace: default  # Change if you use a custom namespace
+spec:
+  replicas: 2  # Number of pods to run
+  selector:
+    matchLabels:
+      app: feature-flag
+  template:
+    metadata:
+      labels:
+        app: feature-flag
+    spec:
+      containers:
+        - name: feature-flag
+          image: 1.0.0
+          ports:
+            - containerPort: 8080
