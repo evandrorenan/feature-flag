@@ -97,5 +97,5 @@ jobs:
         run: |
           kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
           kubectl rollout status deployment/feature-flag
-        env:
-          KUBECONFIG: $PWD/kubeconfig
+#        env:
+#          KUBECONFIG: $PWD/kubeconfig
