@@ -4,7 +4,7 @@ spring:
   application:
     name: feature-flag
   datasource:
-    url: jdbc:postgresql://localhost:5432/flagsDB
+    url: ${FLAGSDB_CONNECTION_STRING}
 
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}

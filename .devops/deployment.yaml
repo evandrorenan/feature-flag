@@ -15,6 +15,22 @@ spec:
     spec:
       containers:
         - name: feature-flag
-          image: 1.0.0
+          image: evandrorenan/feature-flag:1.0.0
           ports:
             - containerPort: 8080
+          env:
+            - name: FLAGSDB_CONNECTION_STRING
+              valueFrom:
+                configMapKeyRef:
+                  name: feature-flag-config
+                  key: FLAGSDB_CONNECTION_STRING
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: feature-flag-db
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: feature-flag-db
+                  key: SPRING_DATASOURCE_PASSWORD
