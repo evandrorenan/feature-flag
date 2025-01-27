@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.Map;
@@ -31,6 +32,7 @@ public class FeatureFlagApplicationConfig {
     }
 
     @Bean
+    @Order(1)
     public CommandLineRunner printEnvironmentVariables() {
         return args -> {
             log.info("Listing all environment variables");
