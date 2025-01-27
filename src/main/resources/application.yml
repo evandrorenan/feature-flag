@@ -15,7 +15,7 @@ spring:
       pool-name: HikariCP
   jpa:
     hibernate:
-      ddl-auto: create-update
+      ddl-auto: create-drop
     show-sql: true
 
 resilience4j.circuitbreaker.instances.myService:
