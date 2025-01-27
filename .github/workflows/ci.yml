@@ -63,12 +63,13 @@ jobs:
 #      - name: Run tests with JUnit
 #        run: mvn test
 
-      - name: Extract feature-flag-sdk-springboot version from pom.xml
+      - name: Extract feature-flag version from pom.xml
         id: extract_version
         run: |
           VERSION=$(grep -A 1 '<artifactId>feature-flag</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
           echo "FEATURE_FLAG_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Feature flag version: $VERSION"
+          sed -i 's/__VERSION__/$FEATURE_FLAG_VERSION/g' Dockerfile"
 
       - name: Clean up Docker configuration
         run: |
@@ -97,5 +98,3 @@ jobs:
         run: |
           kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
           kubectl rollout status deployment/feature-flag
-#        env:
-#          KUBECONFIG: $PWD/kubeconfig
