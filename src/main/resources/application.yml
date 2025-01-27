@@ -1,6 +1,4 @@
 spring:
-
-
   application:
     name: feature-flag
   datasource:
@@ -36,7 +34,7 @@ logging:
   level:
     org:
       springframework:
-        web: INFO
+        web: TRACE
 
 management.endpoints.web.exposure.include: "*"
 management.health.livenessstate.enabled: true
