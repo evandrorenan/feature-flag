@@ -2,6 +2,7 @@ package br.com.evandrorenan.infra.adapters.persistence;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import javax.sql.DataSource;
 
 @Configuration
+@Slf4j
 public class DataSourceConfig {
 
     @Value("${spring.datasource.url}")
@@ -41,6 +43,16 @@ public class DataSourceConfig {
     @Bean
     public DataSource dataSource() {
         HikariConfig hikariConfig = new HikariConfig();
+        log.info("jdbcUrl.............: {}", jdbcUrl);
+        log.info("username............: {}", username);
+        log.info("password............: {}", password);
+        log.info("maximumPoolSize.....: {}", maximumPoolSize);
+        log.info("minimumIdle.........: {}", minimumIdle);
+        log.info("idleTimeout.........: {}", idleTimeout);
+        log.info("setMaxLifetime......: {}", maxLifetime);
+        log.info("setConnectionTimeout: {}", connectionTimeout);
+        log.info("poolName............: {}", poolName);
+
         hikariConfig.setJdbcUrl             (jdbcUrl);
         hikariConfig.setUsername            (username);
         hikariConfig.setPassword            (password);
