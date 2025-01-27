@@ -69,7 +69,7 @@ jobs:
           VERSION=$(grep -A 1 '<artifactId>feature-flag</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
           echo "FEATURE_FLAG_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Feature flag version: $VERSION"
-          sed -i 's/__VERSION__/$FEATURE_FLAG_VERSION/g' Dockerfile"
+          sed -i "s/__VERSION__/$FEATURE_FLAG_VERSION/g" Dockerfile    
 
       - name: Clean up Docker configuration
         run: |
