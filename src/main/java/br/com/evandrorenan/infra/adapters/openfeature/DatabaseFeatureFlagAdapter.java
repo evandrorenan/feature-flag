@@ -9,6 +9,8 @@ import br.com.featureflagsdkjava.domain.ports.FeatureFlagQueryPort;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
+import org.springframework.data.repository.Repository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,8 +18,9 @@ import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-@Service("database")
+@Service("databaseFeatureFlagQuery")
 @Primary
+@Profile("!disabled-database")
 public class DatabaseFeatureFlagAdapter implements FeatureFlagQueryPort, FeatureFlagPersistencePort {
 
     private final FeatureFlagRepository repo;

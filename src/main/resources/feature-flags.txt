@@ -1,0 +1,2 @@
+{ "id": 1, "flagName": "flag1", "state": "ENABLED", "flagType": "STRING", "defaultVariant": "OFF", "variants": { "OFF": "", "ON": "release1" }, "targeting": "{\"if\": [{\"in\": [{\"var\": \"request.body.cdCpfCnpj\"}, [\"11122233355\", \"1234567801\"]]}, \"ON\"]}" }
+{ "id": 2, "flagName": "flag2", "state": "ENABLED", "flagType": "STRING", "defaultVariant": "OFF", "variants": { "OFF": "", "ON": "release2" }, "targeting": "{\"if\": [{\"in\": [{\"var\": \"request.body.user.cdCpfCnpj\"}, [\"11122233344\", \"1234567801\"]]}, \"ON\"]}" }

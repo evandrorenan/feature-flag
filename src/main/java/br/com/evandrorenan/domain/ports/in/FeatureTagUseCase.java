@@ -6,5 +6,5 @@ public interface FeatureTagUseCase {
     String X_FEATURE_FLAG_TAG = "x-feature-flag-tag";
     String BASELINE = "Baseline";
 
-    Map<String, String> run(String body, Map<String, String> headers, ContextBuilder contextBuilder);
+    Map<String, String> run(Map<String, String> headers, String body);
 }

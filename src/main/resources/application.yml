@@ -1,6 +1,8 @@
 spring:
   application:
     name: feature-flag
+  profiles:
+    active: ${PROFILE:default}
   datasource:
     url: ${SPRING_DATASOURCE_URL}
 
@@ -15,8 +17,20 @@ spring:
       pool-name: HikariCP
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     show-sql: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+  show-actuator: true
+  default-produces-media-type: application/json
 
 resilience4j.circuitbreaker.instances.myService:
   registerHealthIndicator: true
@@ -34,7 +48,7 @@ logging:
   level:
     org:
       springframework:
-        web: TRACE
+        web: DEBUG
 
 management.endpoints.web.exposure.include: "*"
 management.health.livenessstate.enabled: true
