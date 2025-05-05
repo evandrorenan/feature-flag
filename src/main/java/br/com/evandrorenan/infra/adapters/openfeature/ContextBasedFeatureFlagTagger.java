@@ -22,7 +22,7 @@ public class ContextBasedFeatureFlagTagger implements FeatureFlagTagger {
     @Override
     public String run(Flag flag, Map<String, String> context) {
         MutableContext oFContext = new MutableContext();
-        context.forEach((key, value) -> oFContext.add(key, value.toString()));
+        context.forEach(oFContext::add);
         return evaluateAndCategorizeFlag(flag, oFContext);
     }
 

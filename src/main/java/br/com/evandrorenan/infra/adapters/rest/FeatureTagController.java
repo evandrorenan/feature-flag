@@ -1,9 +1,10 @@
 package br.com.evandrorenan.infra.adapters.rest;
 
-import br.com.evandrorenan.domain.ports.in.ContextBuilder;
 import br.com.evandrorenan.domain.ports.in.FeatureTagUseCase;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +22,15 @@ public class FeatureTagController {
     private final FeatureTagUseCase featureTagUseCase;
 
     @Autowired
-    public FeatureTagController(FeatureTagUseCase featureTagUseCase, ContextBuilder contextBuilder) {
+    public FeatureTagController(FeatureTagUseCase featureTagUseCase) {
         this.featureTagUseCase = featureTagUseCase;
     }
 
     @RequestMapping(value = "/v1/tag-request")
-    public Object tagGetRequest(@RequestHeader Map<String, String> headers, @RequestBody(required = false) String body) {
-        Map<String, String> newHeaders = featureTagUseCase.run(headers, body);
+    public Object tagGetRequest(
+            HttpServletRequest request,
+            HttpEntity<String> httpEntity, @RequestHeader Map<String, String> headers, @RequestBody(required = false) String body) {
+        Map<String, String> newHeaders = featureTagUseCase.run(request, httpEntity);
         headers.putAll(newHeaders);
         HttpHeaders httpHeaders = new HttpHeaders();
         headers.forEach(httpHeaders::add);

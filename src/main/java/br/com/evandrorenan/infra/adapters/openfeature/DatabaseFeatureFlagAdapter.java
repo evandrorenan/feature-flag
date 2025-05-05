@@ -10,7 +10,6 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
-import org.springframework.data.repository.Repository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -53,6 +52,7 @@ public class DatabaseFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
         return Optional.of(mapper.toFlag(optFlagDAO.get()));
     }
 
+    @SuppressWarnings("unused")
     public Optional<FlagDAO> findFlagByNameFallback(String flagName, Throwable e) {
         log.error("Fallback triggered when trying to fetch flag {} due to: {}", flagName, e);
         return Optional.empty();

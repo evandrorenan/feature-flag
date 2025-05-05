@@ -36,9 +36,7 @@ public class FeatureFlagApplicationConfig {
     public CommandLineRunner printEnvironmentVariables() {
         return args -> {
             log.info("Listing all environment variables");
-            this.environment.getSystemEnvironment().forEach((k, v) -> {
-                log.info("  {}:{}", k, v);
-            });
+            this.environment.getSystemEnvironment().forEach((k, v) -> log.info("  {}:{}", k, v));
         };
     }
 }

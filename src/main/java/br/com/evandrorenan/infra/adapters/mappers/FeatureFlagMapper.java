@@ -5,7 +5,6 @@ import br.com.evandrorenan.infra.adapters.rest.FlagDTO;
 import br.com.featureflagsdkjava.domain.model.Flag;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 

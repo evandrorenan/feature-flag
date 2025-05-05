@@ -1,8 +1,9 @@
 package br.com.evandrorenan.domain.usecases;
 
+import br.com.evandrorenan.domain.model.ProxyRequestContext;
 import br.com.evandrorenan.domain.ports.RequestForwardingService;
-import br.com.evandrorenan.domain.ports.in.ContextBuilder;
 import br.com.evandrorenan.domain.ports.in.EvaluateFlagsUseCase;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,13 +20,13 @@ import java.util.Set;
 @Service
 public class DefaultRequestForwardingService implements RequestForwardingService {
 
-    private final ContextBuilder contextBuilder;
     private final EvaluateFlagsUseCase evaluateStringFlagsUseCase;
+    private final ObjectMapper mapper;
 
     @Autowired
-    public DefaultRequestForwardingService(ContextBuilder contextBuilder, EvaluateFlagsUseCase evaluateStringFlagsUseCase) {
-        this.contextBuilder = contextBuilder;
+    public DefaultRequestForwardingService(EvaluateFlagsUseCase evaluateStringFlagsUseCase, ObjectMapper mapper) {
         this.evaluateStringFlagsUseCase = evaluateStringFlagsUseCase;
+        this.mapper = mapper;
     }
 
     @Override
@@ -45,7 +43,7 @@ public class DefaultRequestForwardingService implements RequestForwardingService
 
     private static ResponseEntity<byte[]> sendRequestToDestination(String decodedDestinationUrl, ProxyRequestContext proxyRequestContext) {
         String extraPath = proxyRequestContext.getRequestPath().replaceFirst(
-                "^/v1/proxy/" + proxyRequestContext.encodedUrlParam, "");
+                "^/v1/proxy/" + proxyRequestContext.encodedUrlParam(), "");
         String fullUrl = decodedDestinationUrl + extraPath;
 
         HttpMethod method = HttpMethod.valueOf(proxyRequestContext.getHttpMethod());
@@ -54,7 +52,7 @@ public class DefaultRequestForwardingService implements RequestForwardingService
         return restTemplate.exchange(
                 fullUrl,
                 method,
-                new HttpEntity<>(proxyRequestContext.getRequestBody(), proxyRequestContext.httpEntity.getHeaders()),
+                new HttpEntity<>(proxyRequestContext.getRequestBody(), proxyRequestContext.getRequestHeaders()),
                 byte[].class
         );
     }
@@ -67,8 +65,7 @@ public class DefaultRequestForwardingService implements RequestForwardingService
     }
 
     private Set<String> evaluateRoutingFeatureFlags(ProxyRequestContext proxyRequestContext) {
-        Map<String, String> featureFlagContext =
-            contextBuilder.run(proxyRequestContext.getRequestHeaders(), proxyRequestContext.getRequestBody());
+        Map<String, String> featureFlagContext = proxyRequestContext.requestContext().getRequestContextMap(mapper);
         return evaluateStringFlagsUseCase.run(featureFlagContext);
     }
 
@@ -76,37 +73,5 @@ public class DefaultRequestForwardingService implements RequestForwardingService
         log.info("Proxy Request -> Method: {}, URI: {}", proxyRequestContext.getHttpMethod(), proxyRequestContext.getRequestPath());
         log.info("Headers: {}", proxyRequestContext.getRequestHeaders());
         log.info("Body: {}", proxyRequestContext.getRequestBody());
-    }
-
-    static class ProxyRequestContext {
-        private final String encodedUrlParam;
-        private final HttpServletRequest request;
-        private final HttpEntity<String> httpEntity;
-
-        public ProxyRequestContext(String encodedUrlParam, HttpServletRequest request, HttpEntity<String> httpEntity) {
-            this.encodedUrlParam = encodedUrlParam;
-            this.request = request;
-            this.httpEntity = httpEntity;
-        }
-
-        public String getDecodedUrlParam() {
-            return new String(Base64.getUrlDecoder().decode(encodedUrlParam), StandardCharsets.UTF_8);
-        }
-
-        public String getHttpMethod() {
-            return request.getMethod();
-        }
-
-        public String getRequestPath() {
-            return request.getRequestURI();
-        }
-
-        public Map<String, String> getRequestHeaders() {
-            return httpEntity.getHeaders().asSingleValueMap();
-        }
-
-        public String getRequestBody() {
-            return httpEntity.getBody();
-        }
     }
 }

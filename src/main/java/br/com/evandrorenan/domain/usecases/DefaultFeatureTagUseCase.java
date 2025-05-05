@@ -1,15 +1,19 @@
 package br.com.evandrorenan.domain.usecases;
 
-import br.com.evandrorenan.domain.ports.in.ContextBuilder;
+import br.com.evandrorenan.domain.model.RequestContext;
 import br.com.evandrorenan.domain.ports.in.EvaluateFlagsUseCase;
 import br.com.evandrorenan.domain.ports.in.FeatureTagUseCase;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
+import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Processor for setting feature flag tags in the exchange headers.
@@ -18,23 +22,28 @@ import java.util.*;
 @Service
 public class DefaultFeatureTagUseCase implements FeatureTagUseCase {
     private final EvaluateFlagsUseCase evaluateStringFlagsUseCase;
-    private final ContextBuilder contextBuilder;
+    private final ObjectMapper mapper;
 
     @Autowired
     public DefaultFeatureTagUseCase(
-            @Qualifier("evaluateStringFlags") EvaluateFlagsUseCase evaluateStringFlagsUseCase, ContextBuilder contextBuilder) {
+            @Qualifier("evaluateStringFlags") EvaluateFlagsUseCase evaluateStringFlagsUseCase,
+            ObjectMapper mapper) {
         this.evaluateStringFlagsUseCase = evaluateStringFlagsUseCase;
-        this.contextBuilder = contextBuilder;
+        this.mapper = mapper;
     }
 
     @Override
-    public Map<String, String> run(Map<String, String> headers, String body) {
+    public Map<String, String> run(HttpServletRequest request, HttpEntity<String> httpEntity) {
+
+        RequestContext requestContext = RequestContext.from(request, httpEntity);
+        Map<String, String> headers = requestContext.headers().asSingleValueMap();
+
         if (headers.containsKey(X_FEATURE_FLAG_TAG)) {
             log.info("Request already tagged: {}", headers.get(X_FEATURE_FLAG_TAG));
             return headers;
         }
 
-        Map<String, String> featureFlagContext = contextBuilder.run(headers, body);
+        Map<String, String> featureFlagContext = requestContext.getRequestContextMap(mapper);
         Set<String> tags = evaluateStringFlagsUseCase.run(featureFlagContext);
 
         if (!shouldAddHeader(tags)) return headers;

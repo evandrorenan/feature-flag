@@ -10,9 +10,9 @@ import java.util.Optional;
 @Profile("!disabled-database")
 public interface FeatureFlagRepository extends CrudRepository<FlagDAO, Long> {
     @Query("""
-        SELECT DISTINCT f 
-        FROM FlagDAO f 
-        JOIN f.variants fv 
+        SELECT DISTINCT f
+        FROM FlagDAO f
+        JOIN f.variants fv
         WHERE f.flagType = 'STRING'
     """)
     List<FlagDAO> findByFlagType(FlagDAO.FlagType flagType);

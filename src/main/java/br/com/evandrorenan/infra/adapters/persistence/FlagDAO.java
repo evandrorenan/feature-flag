@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
@@ -58,62 +57,28 @@ public class FlagDAO {
         return id;
     }
 
-    public FlagDAO setId(Long id) {
-        this.id = id;
-        return this;
-    }
-
     public String getFlagName() {
         return flagName;
-    }
-
-    public FlagDAO setFlagName(String flagName) {
-        this.flagName = flagName;
-        return this;
     }
 
     public FlagType getFlagType() {
         return flagType;
     }
 
-    public FlagDAO setFlagType(FlagType flagType) {
-        this.flagType = flagType;
-        return this;
-    }
-
     public State getState() {
         return state;
-    }
-
-    public FlagDAO setState(State state) {
-        this.state = state;
-        return this;
     }
 
     public String getDefaultVariant() {
         return defaultVariant;
     }
 
-    public FlagDAO setDefaultVariant(String defaultVariant) {
-        this.defaultVariant = defaultVariant;
-        return this;
-    }
-
     public String getTargeting() {
         return targeting;
-    }
-
-    public FlagDAO setTargeting(String targeting) {
-        this.targeting = targeting;
-        return this;
     }
 
     public Map<String, String> getVariants() {
         return variants;
     }
 
-    public FlagDAO setVariants(Map<String, String> variants) {
-        this.variants = variants;
-        return this;
-    }
 }
