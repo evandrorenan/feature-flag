@@ -4,7 +4,7 @@ metadata:
   name: feature-flag
   namespace: default  # Change if you use a custom namespace
 spec:
-  replicas: 2  # Number of pods to run
+  replicas: 2  # Number of pods to evaluateAllFeatureFlags
   selector:
     matchLabels:
       app: feature-flag

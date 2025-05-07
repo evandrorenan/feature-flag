@@ -6,10 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
@@ -22,20 +22,15 @@ public class FeatureProxyController {
         this.requestProxy = requestProxy;
     }
 
-    @PostMapping("/v1/base64/encode")
-    public String base64Encode(@RequestBody String body) {
-        return Base64.getUrlEncoder().encodeToString(body.getBytes(StandardCharsets.UTF_8));
-    }
-
     @RequestMapping(
-            path = "/v1/proxy/{encodedUrlParam}/**",
+            path = "/v1/proxy/{featureFlagName}/**",
             method = { RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE }
     )
     public ResponseEntity<Object> handleProxyRequest(
             HttpServletRequest request,
             HttpEntity<String> httpEntity,
-            @PathVariable("encodedUrlParam") String encodedUrlParam) {
+            @PathVariable("featureFlagName") String featureFlagName) {
 
-        return requestProxy.forward(encodedUrlParam, request, httpEntity);
+        return requestProxy.forward(featureFlagName, request, httpEntity);
     }
 }

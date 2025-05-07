@@ -12,7 +12,7 @@ import java.util.Map;
 
 @Slf4j
 public record ProxyRequestContext (
-    String encodedUrlParam,
+    String featureFlagName,
     RequestContext requestContext) {
 
     public ProxyRequestContext(String encodedUrlParam, HttpServletRequest request, HttpEntity<String> httpEntity) {
@@ -20,7 +20,7 @@ public record ProxyRequestContext (
     }
 
     public String getDecodedUrlParam() {
-        return new String(Base64.getUrlDecoder().decode(encodedUrlParam), StandardCharsets.UTF_8);
+        return new String(Base64.getUrlDecoder().decode(featureFlagName), StandardCharsets.UTF_8);
     }
 
     public String getHttpMethod() {

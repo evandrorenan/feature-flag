@@ -8,5 +8,5 @@ import org.springframework.stereotype.Component;
 @Component
 public interface RequestForwardingService {
 
-    ResponseEntity<Object> forward(String encodedUrlParam, HttpServletRequest request, HttpEntity<String> httpEntity);
+    ResponseEntity<Object> forward(String featureFlagName, HttpServletRequest request, HttpEntity<String> httpEntity);
 }
