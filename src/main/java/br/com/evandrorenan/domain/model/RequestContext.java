@@ -26,18 +26,8 @@ public record RequestContext(
                 .URI(request.getRequestURI())
                 .headers(httpEntity.getHeaders())
                 .parameters(request.getParameterMap())
-                .body(getBodyAsBytes(request))
+                .body(httpEntity.getBody() != null ? httpEntity.getBody().getBytes() : null)
                 .build();
-    }
-
-    private static byte[] getBodyAsBytes(HttpServletRequest request) {
-        byte[] body = null;
-        try {
-            body = request.getInputStream().readAllBytes();
-        } catch (IOException e) {
-            log.info("Request has no body");
-        }
-        return body;
     }
 
     @SuppressWarnings("unchecked")

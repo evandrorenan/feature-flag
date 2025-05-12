@@ -13,9 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- *
- */
 @Service
 public class FeatureFlagEvaluator implements EvaluateFeatureFlagsUseCase {
 
@@ -31,35 +28,35 @@ public class FeatureFlagEvaluator implements EvaluateFeatureFlagsUseCase {
     }
 
     @Override
-    public <T> Map<String, T> evaluateAllFeatureFlags(ImmutableContext context, Class<T> type) {
-        List<Flag> flags = queryPort.findFlagsByType(getFlagType(type));
+    public <T> Map<String, T> evaluateAllFeatureFlagsOfType(ImmutableContext context, Class<T> type) {
+        List<Flag> flags = queryPort.findFlagsByType(getType(type));
 
         Map<String, T> results = new HashMap<>();
         flags.forEach(flag -> {
             T result = this.evaluateFeatureFlag(flag, context, type);
-            if (result != null) results.put(flag.getFlagName(), result);
+            if (result != null) results.put(flag.getName(), result);
         });
         return results;
     }
 
 
-    @SuppressWarnings("unchecked")
     private <T> T evaluateFeatureFlag(Flag flag, ImmutableContext context, Class<T> type) {
-        return switch (type.getSimpleName()) {
-            case "String" -> (T) client.getStringValue(flag.getFlagName(), "", context);
-            case "Boolean" -> (T) client.getBooleanValue(flag.getFlagName(), false, context);
-            case "Integer" -> (T) client.getIntegerValue(flag.getFlagName(), 0, context);
-            case "Double" -> (T) client.getDoubleValue(flag.getFlagName(), 0.0, context);
+        Object value = switch (type.getSimpleName()) {
+            case "String" -> client.getStringValue(flag.getName(), "", context);
+            case "Boolean" -> client.getBooleanValue(flag.getName(), false, context);
+            case "Integer" -> client.getIntegerValue(flag.getName(), 0, context);
+            case "Double" -> client.getDoubleValue(flag.getName(), 0.0, context);
             default -> throw new IllegalArgumentException("Unsupported flag type: " + type);
         };
+        return type.cast(value);
     }
 
-    private static Flag.FlagType getFlagType(Class<?> type) {
+    public static Flag.Type getType(Class<?> type) {
         return switch (type.getSimpleName()) {
-            case "String" -> Flag.FlagType.STRING;
-            case "Boolean" -> Flag.FlagType.BOOLEAN;
-            case "Integer", "Double" -> Flag.FlagType.NUMBER;
-            default -> Flag.FlagType.OBJECT;
+            case "String" -> Flag.Type.STRING;
+            case "Boolean" -> Flag.Type.BOOLEAN;
+            case "Integer", "Double" -> Flag.Type.NUMBER;
+            default -> Flag.Type.OBJECT;
         };
     }
 }

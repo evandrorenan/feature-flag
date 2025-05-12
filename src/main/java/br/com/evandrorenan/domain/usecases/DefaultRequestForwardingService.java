@@ -2,11 +2,9 @@ package br.com.evandrorenan.domain.usecases;
 
 import br.com.evandrorenan.domain.model.ProxyRequestContext;
 import br.com.evandrorenan.domain.ports.RequestForwardingService;
+import br.com.evandrorenan.domain.ports.out.RequestDetailsLogger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.openfeature.sdk.Client;
-import dev.openfeature.sdk.ImmutableContext;
-import dev.openfeature.sdk.exceptions.InvalidContextError;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -24,25 +22,30 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
 public class DefaultRequestForwardingService implements RequestForwardingService {
 
+    private final RestTemplate restTemplate;
     private final ObjectMapper mapper;
     private final Client featureFlagClient;
+    private final RequestDetailsLogger requestDetailsLogger;
 
     @Autowired
-    public DefaultRequestForwardingService(ObjectMapper mapper, Client featureFlagClient) {
+    public DefaultRequestForwardingService(RestTemplate restTemplate, ObjectMapper mapper, Client featureFlagClient, RequestDetailsLogger requestDetailsLogger) {
+        this.restTemplate = restTemplate;
         this.mapper = mapper;
         this.featureFlagClient = featureFlagClient;
+        this.requestDetailsLogger = requestDetailsLogger;
     }
 
     @Override
-    public ResponseEntity<Object> forward(String featureFlagName, HttpServletRequest request, HttpEntity<String> httpEntity) {
-        ProxyRequestContext proxyRequestContext = new ProxyRequestContext(featureFlagName, request, httpEntity);
-        logRequestDetails(proxyRequestContext);
-        String destinationUrl = resolveDestinationUrl(proxyRequestContext);
+    public ResponseEntity<Object> forward(ProxyRequestContext proxyRequestContext) {
+        requestDetailsLogger.log(proxyRequestContext);
+        String destinationUrl = proxyRequestContext.resolveDestinationUrl(featureFlagClient, mapper);
         ResponseEntity<byte[]> response = sendRequestToDestination(destinationUrl, proxyRequestContext);
 
         return ResponseEntity.status(response.getStatusCode())
@@ -50,11 +53,10 @@ public class DefaultRequestForwardingService implements RequestForwardingService
                              .body(response.getBody());
     }
 
-    private static ResponseEntity<byte[]> sendRequestToDestination(String destinationUrl, ProxyRequestContext ctx) {
+    private ResponseEntity<byte[]> sendRequestToDestination(String destinationUrl, ProxyRequestContext ctx) {
         String extraPath = ctx.getRequestPath().replaceFirst("^/v1/proxy/" + ctx.featureFlagName(), "");
         URI uri = buildURI(destinationUrl, ctx, extraPath);
 
-        RestTemplate restTemplate = new RestTemplate();
         restTemplate.setErrorHandler(noOpErrorHandler());
 
         return restTemplate.exchange(
@@ -66,12 +68,47 @@ public class DefaultRequestForwardingService implements RequestForwardingService
     }
 
     private static URI buildURI(String destinationUrl, ProxyRequestContext ctx, String extraPath) {
+        MultiValueMap<String, String> requestParams = extractQueryParams(ctx, extraPath);
+
+        extraPath = removeQueryParams(extraPath);
+
         return UriComponentsBuilder
                 .fromUriString(destinationUrl)
                 .path(extraPath)
-                .queryParams(toMultiValueMap(ctx.requestContext().parameters()))
+                .queryParams(requestParams)
                 .build(true)
                 .toUri();
+    }
+
+    private static String removeQueryParams(String extraPath) {
+        int qpPosition = extraPath.indexOf("?");
+
+        if (qpPosition == -1) return extraPath;
+
+        return extraPath.substring(0, qpPosition);
+    }
+
+    private static MultiValueMap<String, String> extractQueryParams(ProxyRequestContext ctx, String extraPath) {
+        int qpPos = extraPath.indexOf('?');
+        if (qpPos == -1) return toMultiValueMap(ctx.requestContext().parameters());
+
+        String queryString = extraPath.substring(extraPath.indexOf('?') + 1);
+        if (extraPath == null || extraPath.isEmpty()) {
+            return toMultiValueMap(ctx.requestContext().parameters());
+        }
+
+        Map<String, String[]> params =
+            Stream.of(queryString.split("&"))
+              .map(param -> param.split("=", 2))
+              .collect(Collectors.toMap(
+                      keyValue -> keyValue[0],
+                      keyValue -> keyValue.length > 1 ? keyValue[1].split(",") : new String[0],
+                      (existing, replacement) -> replacement // Handle duplicate keys by taking the last value
+              ));
+
+        params.putAll(ctx.requestContext().parameters());
+
+        return toMultiValueMap(params);
     }
 
     private static MultiValueMap<String, String> toMultiValueMap(Map<String, String[]> rawParams) {
@@ -92,26 +129,5 @@ public class DefaultRequestForwardingService implements RequestForwardingService
             @Override
             public void handleError(ClientHttpResponse response) { /* no-op */ }
         };
-    }
-
-    private String resolveDestinationUrl(ProxyRequestContext proxyRequestContext) {
-
-        ImmutableContext context = proxyRequestContext.requestContext().getFeatureFlagContext(mapper);
-        String destinationUrl = this.featureFlagClient.getStringValue(
-                proxyRequestContext.featureFlagName(), "", context);
-
-        if (destinationUrl == null || destinationUrl.isEmpty()) {
-            log.error("Flag {} evaluated but no destination was found. {}",
-                    proxyRequestContext.featureFlagName(), context);
-            throw new InvalidContextError("Feature Flag evaluation failed.");
-        }
-
-        return destinationUrl;
-    }
-
-    private static void logRequestDetails(ProxyRequestContext proxyRequestContext) {
-        log.info("Proxy Request -> Method: {}, URI: {}", proxyRequestContext.getHttpMethod(), proxyRequestContext.getRequestPath());
-        log.info("Headers: {}", proxyRequestContext.getRequestHeaders());
-        log.info("Body: {}", proxyRequestContext.getRequestBody());
     }
 }

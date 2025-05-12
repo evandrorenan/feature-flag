@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -34,7 +35,7 @@ public class DefaultFeatureTagUseCase implements FeatureTagUseCase {
     public Map<String, String> run(HttpServletRequest request, HttpEntity<String> httpEntity) {
 
         RequestContext requestContext = RequestContext.from(request, httpEntity);
-        Map<String, String> headers = requestContext.headers().asSingleValueMap();
+        Map<String, String> headers = new HashMap<>(requestContext.headers().asSingleValueMap());
 
         if (headers.containsKey(X_FEATURE_FLAG_TAG)) {
             log.info("Request already tagged: {}", headers.get(X_FEATURE_FLAG_TAG));
@@ -42,14 +43,14 @@ public class DefaultFeatureTagUseCase implements FeatureTagUseCase {
         }
 
         ImmutableContext featureFlagContext = requestContext.getFeatureFlagContext(mapper);
-        Map<String, String> tags = evaluateStringFlagsUseCase.evaluateAllFeatureFlags(featureFlagContext, String.class);
+        Map<String, String> tags = evaluateStringFlagsUseCase.evaluateAllFeatureFlagsOfType(featureFlagContext, String.class);
 
         if (!shouldAddHeader(tags)) return headers;
         headers.put(X_FEATURE_FLAG_TAG, tags.values().toArray(new String[0])[0]);
         return headers;
     }
 
-    private static boolean shouldAddHeader(Map<String, String> tags) {
+    protected static boolean shouldAddHeader(Map<String, String> tags) {
         if (tags.isEmpty()) {
             log.info("Request doesn't match any flag");
             return false;
