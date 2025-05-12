@@ -44,7 +44,7 @@ mvn clean install
 Execução:
 
 ```bash
-mvn spring-boot:evaluateAllFeatureFlags
+mvn spring-boot:evaluateAllFeatureFlagsOfType
 ```
 ## Documentação da API
 

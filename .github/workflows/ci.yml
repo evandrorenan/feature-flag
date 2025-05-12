@@ -61,7 +61,7 @@ jobs:
         run: mvn clean install -DskipTests=true
 
 #      - name: Run tests with JUnit
-#        evaluateAllFeatureFlags: mvn test
+#        evaluateAllFeatureFlagsOfType: mvn test
 
       - name: Extract feature-flag version from pom.xml
         id: extract_version
