@@ -1,175 +1,182 @@
 package br.com.evandrorenan.domain.usecases;
 
-import br.com.evandrorenan.domain.ports.in.ContextBuilder;
-import br.com.evandrorenan.domain.ports.in.FeatureFlagTagger;
-import br.com.featureflagsdkjava.domain.model.Flag;
-import br.com.featureflagsdkjava.domain.ports.FeatureFlagQueryPort;
+import br.com.evandrorenan.domain.ports.in.EvaluateFeatureFlagsUseCase;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.util.MultiValueMap;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-import static br.com.evandrorenan.domain.ports.in.FeatureTagUseCase.BASELINE;
 import static br.com.evandrorenan.domain.ports.in.FeatureTagUseCase.X_FEATURE_FLAG_TAG;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DefaultFeatureTagUseCaseTest {
 
     @Mock
-    private FeatureFlagQueryPort queryPort;
+    private EvaluateFeatureFlagsUseCase evaluateStringFlagsUseCase;
 
     @Mock
-    private FeatureFlagTagger evaluator;
+    private ObjectMapper mapper;
+
+    @InjectMocks
+    private DefaultFeatureTagUseCase featureTagUseCase;
 
     @Mock
-    private ContextBuilder contextBuilder;
+    private HttpServletRequest request;
 
-    private DefaultFeatureTagUseCase useCase;
+    @Mock
+    private HttpEntity<String> httpEntity;
+    private MockHttpServletRequest mockedRequest;
 
     @BeforeEach
     void setUp() {
-        useCase = new DefaultFeatureTagUseCase(queryPort, evaluator);
+        mockedRequest = new MockHttpServletRequest("GET", "/v1/proxy/some/path?param1=val1&param2=val2");
+        mockedRequest.addHeader("Content-Type", "application/json");
+        mockedRequest.addHeader("Authorization", "Bearer token");
+
+        MultiValueMap<String, String> headers = new HttpHeaders();
+        headers.add("Content-Type1", "application/json");
+        headers.add("Authorization", "Bearer token");
+        String requestBody = "{\"key\": \"value\"}";
+
+        httpEntity = new HttpEntity<>(requestBody, headers);
     }
 
     @Test
-    void shouldReturnExistingHeadersWhenAlreadyTagged() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(X_FEATURE_FLAG_TAG, "existing-tag");
+    void run_headerAlreadyPresent_returnsExistingHeaders() {
+        EvaluateFeatureFlagsUseCase mockedEvaluateFFUseCase = mock(EvaluateFeatureFlagsUseCase.class);
 
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
+        DefaultFeatureTagUseCase featureTagUseCase = new DefaultFeatureTagUseCase(mockedEvaluateFFUseCase, new ObjectMapper());
 
-        // Then
-        assertEquals(headers, result);
-        verifyNoInteractions(queryPort, evaluator, contextBuilder);
+        MultiValueMap<String, String> headers = new HttpHeaders();
+        headers.add("Content-Type1", "application/json");
+        headers.add("Authorization", "Bearer token");
+        headers.add(X_FEATURE_FLAG_TAG, "tag");
+        String requestBody = "{\"key\": \"value\"}";
+        httpEntity = new HttpEntity<>(requestBody, headers);
+
+        Map<String, String> newHeaders = featureTagUseCase.run(mockedRequest, httpEntity);
+
+        assertTrue(matchOriginalHeaders(newHeaders));
+        assertTrue(matchNewHeaders(newHeaders));
     }
 
     @Test
-    void shouldAddTagWhenSingleValidFlagMatches() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        Map<String, String> context = new HashMap<>();
-        List<Flag> flags = Collections.singletonList(new Flag());
-        String expectedTag = "valid-tag";
+    void run_noMatchingFlags_returnsOriginalHeaders() {
+        EvaluateFeatureFlagsUseCase mockedEvaluateFFUseCase = mock(EvaluateFeatureFlagsUseCase.class);
+        when(mockedEvaluateFFUseCase.evaluateAllFeatureFlagsOfType(any(), any()))
+                .thenReturn(Collections.emptyMap());
 
-        when(contextBuilder.run(body, headers)).thenReturn(context);
-        when(queryPort.findFlagsByType(Flag.FlagType.STRING)).thenReturn(flags);
-        when(evaluator.run(any(Flag.class), eq(context))).thenReturn(expectedTag);
+        DefaultFeatureTagUseCase featureTagUseCase = new DefaultFeatureTagUseCase(mockedEvaluateFFUseCase, new ObjectMapper());
 
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
+        Map<String, String> newHeaders = featureTagUseCase.run(mockedRequest, httpEntity);
 
-        // Then
-        assertTrue(result.containsKey(X_FEATURE_FLAG_TAG));
-        assertEquals(expectedTag, result.get(X_FEATURE_FLAG_TAG));
+        assertTrue(matchOriginalHeaders(newHeaders));
+        assertTrue(matchNewHeaders(newHeaders));
     }
 
     @Test
-    void shouldNotAddTagWhenNoFlagsMatch() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        Map<String, String> context = new HashMap<>();
-        List<Flag> flags = Collections.singletonList(new Flag());
+    void run_singleMatchingFlag_addsTagHeader() {
+        EvaluateFeatureFlagsUseCase mockedEvaluateFFUseCase = mock(EvaluateFeatureFlagsUseCase.class);
+        when(mockedEvaluateFFUseCase.evaluateAllFeatureFlagsOfType(any(), any()))
+                .thenReturn(Map.of("flag1", "tag1"));
 
-        when(contextBuilder.run(eq(body), eq(headers))).thenReturn(context);
-        when(queryPort.findFlagsByType(Flag.FlagType.STRING)).thenReturn(flags);
-        when(evaluator.run(any(Flag.class), eq(context))).thenReturn("");
+        DefaultFeatureTagUseCase featureTagUseCase = new DefaultFeatureTagUseCase(mockedEvaluateFFUseCase, new ObjectMapper());
 
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
+        Map<String, String> newHeaders = featureTagUseCase.run(mockedRequest, httpEntity);
 
-        // Then
-        assertFalse(result.containsKey(X_FEATURE_FLAG_TAG));
+        assertTrue(newHeaders.containsKey(X_FEATURE_FLAG_TAG));
+        assertEquals("tag1", newHeaders.get(X_FEATURE_FLAG_TAG));
+        newHeaders.remove(X_FEATURE_FLAG_TAG);
+        assertTrue(matchOriginalHeaders(newHeaders));
+        assertTrue(matchNewHeaders(newHeaders));
     }
 
     @Test
-    void shouldNotAddTagWhenMultipleFlagsMatch() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        Map<String, String> context = new HashMap<>();
-        Flag flag1 = new Flag();
-        flag1.setFlagName("flag1");
-        Flag flag2 = new Flag();
-        flag2.setFlagName("flag2");
-        List<Flag> flags = Arrays.asList(flag1, flag2);
+    void run_multipleMatchingFlags_returnsOriginalHeaders() {
+        EvaluateFeatureFlagsUseCase mockedEvaluateFFUseCase = mock(EvaluateFeatureFlagsUseCase.class);
+        when(mockedEvaluateFFUseCase.evaluateAllFeatureFlagsOfType(any(), any()))
+                .thenReturn(Map.of("flag1", "tag1", "flag2", "tag2"));
 
-        when(contextBuilder.run(eq(body), eq(headers))).thenReturn(context);
-        when(queryPort.findFlagsByType(Flag.FlagType.STRING)).thenReturn(flags);
-        when(evaluator.run(flag1, context)).thenReturn("tag1");
-        when(evaluator.run(flag2, context)).thenReturn("tag2");
+        DefaultFeatureTagUseCase featureTagUseCase = new DefaultFeatureTagUseCase(mockedEvaluateFFUseCase, new ObjectMapper());
 
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
+        Map<String, String> newHeaders = featureTagUseCase.run(mockedRequest, httpEntity);
 
-        // Then
-        assertFalse(result.containsKey(X_FEATURE_FLAG_TAG));
+        assertTrue(matchOriginalHeaders(newHeaders));
+        assertTrue(matchNewHeaders(newHeaders));
     }
 
     @Test
-    void shouldNotAddTagWhenBaselineFlag() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        Map<String, String> context = new HashMap<>();
-        List<Flag> flags = Collections.singletonList(new Flag());
+    void run_matchingFlagWithNullOrEmptyValue_returnsOriginalHeaders() {
+        EvaluateFeatureFlagsUseCase mockedEvaluateFFUseCase = mock(EvaluateFeatureFlagsUseCase.class);
+        when(mockedEvaluateFFUseCase.evaluateAllFeatureFlagsOfType(any(), any()))
+                .thenReturn(Map.of("flag1", ""));
 
-        when(contextBuilder.run(eq(body), eq(headers))).thenReturn(context);
-        when(queryPort.findFlagsByType(Flag.FlagType.STRING)).thenReturn(flags);
-        when(evaluator.run(any(Flag.class), eq(context))).thenReturn(BASELINE);
+        DefaultFeatureTagUseCase featureTagUseCase = new DefaultFeatureTagUseCase(mockedEvaluateFFUseCase, new ObjectMapper());
 
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
+        Map<String, String> newHeaders = featureTagUseCase.run(mockedRequest, httpEntity);
 
-        // Then
-        assertFalse(result.containsKey(X_FEATURE_FLAG_TAG));
+        assertTrue(matchOriginalHeaders(newHeaders));
+        assertTrue(matchNewHeaders(newHeaders));
     }
 
-    @Test
-    void shouldHandleNullTagFromEvaluator() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        Map<String, String> context = new HashMap<>();
-        List<Flag> flags = Collections.singletonList(new Flag());
+//    @Test
+//    void shouldAddHeader_emptyTags_returnsFalse() {
+//        Map<String, String> emptyTags = Collections.emptyMap();
+//        assertFalse(DefaultFeatureTagUseCase.shouldAddHeader(emptyTags));
+//    }
+//
+//    @Test
+//    void shouldAddHeader_multipleTags_returnsFalse() {
+//        Map<String, String> multipleTags = Map.of("featureA", "tagA", "featureB", "tagB");
+//        assertFalse(DefaultFeatureTagUseCase.shouldAddHeader(multipleTags));
+//    }
+//
+//    @Test
+//    void shouldAddHeader_singleTagNullValue_returnsFalse() {
+//        Map<String, String> singleTagNull = Collections.singletonMap("featureA", null);
+//        assertFalse(DefaultFeatureTagUseCase.shouldAddHeader(singleTagNull));
+//    }
+//
+//    @Test
+//    void shouldAddHeader_singleTagEmptyValue_returnsFalse() {
+//        Map<String, String> singleTagEmpty = Collections.singletonMap("featureA", "");
+//        assertFalse(DefaultFeatureTagUseCase.shouldAddHeader(singleTagEmpty));
+//    }
+//
+//    @Test
+//    void shouldAddHeader_singleTagWithValue_returnsTrue() {
+//        Map<String, String> singleTagWithValue = Collections.singletonMap("featureA", "validTag");
+//        assertTrue(DefaultFeatureTagUseCase.shouldAddHeader(singleTagWithValue));
+//    }
 
-        when(contextBuilder.run(eq(body), eq(headers))).thenReturn(context);
-        when(queryPort.findFlagsByType(Flag.FlagType.STRING)).thenReturn(flags);
-        when(evaluator.run(any(Flag.class), eq(context))).thenReturn(null);
-
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
-
-        // Then
-        assertFalse(result.containsKey(X_FEATURE_FLAG_TAG));
+    private boolean matchNewHeaders(Map<String, String> newHeaders) {
+        return httpEntity.getHeaders().entrySet().stream()
+                         .allMatch(entry -> newHeaders.containsKey(entry.getKey())
+                                 && entry.getValue().size() == 1
+                                 && Objects.equals(entry.getValue().get(0), newHeaders.get(entry.getKey())));
     }
 
-    @Test
-    void shouldHandleEmptyFlagsList() {
-        // Given
-        String body = "test-body";
-        Map<String, String> headers = new HashMap<>();
-        Map<String, String> context = new HashMap<>();
-
-        when(contextBuilder.run(eq(body), eq(headers))).thenReturn(context);
-        when(queryPort.findFlagsByType(Flag.FlagType.STRING)).thenReturn(Collections.emptyList());
-
-        // When
-        Map<String, String> result = useCase.run(body, headers, contextBuilder);
-
-        // Then
-        assertFalse(result.containsKey(X_FEATURE_FLAG_TAG));
-        verify(evaluator, never()).run(any(), any());
+    private boolean matchOriginalHeaders(Map<String, String> newHeaders) {
+        return newHeaders.entrySet().stream()
+                         .allMatch(entry -> httpEntity.getHeaders().containsKey(entry.getKey())
+                                 && httpEntity.getHeaders().get(entry.getKey()).contains(entry.getValue()));
     }
 }

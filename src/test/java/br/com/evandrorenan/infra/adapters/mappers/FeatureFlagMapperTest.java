@@ -4,8 +4,6 @@ import br.com.evandrorenan.infra.TestUtils;
 import br.com.evandrorenan.infra.adapters.persistence.FlagDAO;
 import br.com.evandrorenan.infra.adapters.rest.FlagDTO;
 import br.com.featureflagsdkjava.domain.model.Flag;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
@@ -15,10 +13,8 @@ import java.util.Map;
 @Slf4j
 class FeatureFlagMapperTest {
 
-    private final ObjectMapper mapper = new ObjectMapper();
-
     @Test
-    void shouldMapToDestinationObject() throws JsonProcessingException {
+    void shouldMapToDestinationObject() {
         FeatureFlagMapperImpl featureFlagMapper = new FeatureFlagMapperImpl();
         Flag baseFlag = createBaseFlag();
         FlagDAO flagDAO = featureFlagMapper.toFlagDAO(baseFlag);
@@ -41,11 +37,11 @@ class FeatureFlagMapperTest {
 
     private static Flag createBaseFlag() {
         Flag flag = new Flag();
-        flag.setFlagName("test-flag");
-        flag.setFlagType(Flag.FlagType.STRING);
+        flag.setName("test-flag");
+        flag.setType(Flag.Type.STRING);
         flag.setState(Flag.State.ENABLED);
         flag.setDefaultVariant("default-variant");
-        Map<String, String> variants = Map.of(
+        Map<String, Object> variants = Map.of(
                 "default-variant", "DEFAULT",
                 "alternative-variant", "ALTERNATIVE"
         );
