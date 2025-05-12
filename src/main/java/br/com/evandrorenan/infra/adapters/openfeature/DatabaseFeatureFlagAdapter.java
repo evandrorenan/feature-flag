@@ -40,8 +40,8 @@ public class DatabaseFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
     }
 
     @Override
-    public List<Flag> findFlagsByType(Flag.FlagType flagType) {
-        return mapper.toFlagListFromDAO(repo.findByFlagType(FlagDAO.FlagType.valueOf(flagType.name())));
+    public List<Flag> findFlagsByType(Flag.Type type) {
+        return mapper.toFlagListFromDAO(repo.findByFlagType(FlagDAO.Type.valueOf(type.name())));
     }
 
     @CircuitBreaker(name = "databaseFeatureFlagAdapter", fallbackMethod = "findFlagByNameFallback")

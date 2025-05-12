@@ -13,9 +13,9 @@ public interface FeatureFlagRepository extends CrudRepository<FlagDAO, Long> {
         SELECT DISTINCT f
         FROM FlagDAO f
         JOIN f.variants fv
-        WHERE f.flagType = 'STRING'
+        WHERE f.type = 'STRING'
     """)
-    List<FlagDAO> findByFlagType(FlagDAO.FlagType flagType);
+    List<FlagDAO> findByFlagType(FlagDAO.Type type);
 
     Optional<FlagDAO> findByFlagName(String flagName);
 }

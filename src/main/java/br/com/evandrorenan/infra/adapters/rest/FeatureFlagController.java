@@ -39,9 +39,9 @@ public class FeatureFlagController {
     }
 
     @GetMapping("/v1/flags/by-type/{flagType}")
-    public ResponseEntity<List<Flag>> getFlagsByType(@PathVariable(name = "flagType") String flagType) {
+    public ResponseEntity<List<Flag>> getFlagsByType(@PathVariable(name = "type") String flagType) {
         try {
-            Flag.FlagType type = Flag.FlagType.valueOf(flagType);
+            Flag.Type type = Flag.Type.valueOf(flagType);
             return ResponseEntity.ok(queryPort.findFlagsByType(type));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();

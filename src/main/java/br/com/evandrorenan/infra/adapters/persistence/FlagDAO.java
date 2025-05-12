@@ -23,11 +23,11 @@ public class FlagDAO {
     private Long id;
 
     @Column(name = "flag_name", nullable = false, unique = true)
-    private String flagName;
+    private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "flag_type", nullable = false)
-    private FlagType flagType;
+    private Type type;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false)
@@ -43,9 +43,9 @@ public class FlagDAO {
     @CollectionTable(name = "variants", joinColumns = @JoinColumn(name = "flag_id"))
     @MapKeyColumn(name = "variant_key")
     @Column(name = "variant_value")
-    private Map<String, String> variants;
+    private Map<String, Object> variants;
 
-    public enum FlagType {
+    public enum Type {
         BOOLEAN, STRING, NUMBER, OBJECT
     }
 
@@ -57,12 +57,12 @@ public class FlagDAO {
         return id;
     }
 
-    public String getFlagName() {
-        return flagName;
+    public String getName() {
+        return name;
     }
 
-    public FlagType getFlagType() {
-        return flagType;
+    public Type getType() {
+        return type;
     }
 
     public State getState() {
@@ -77,7 +77,7 @@ public class FlagDAO {
         return targeting;
     }
 
-    public Map<String, String> getVariants() {
+    public Map<String, Object> getVariants() {
         return variants;
     }
 

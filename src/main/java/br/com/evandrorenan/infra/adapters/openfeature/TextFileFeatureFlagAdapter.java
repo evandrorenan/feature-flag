@@ -21,12 +21,12 @@ import java.util.*;
 @Primary
 @Profile("disabled-database")
 public class TextFileFeatureFlagAdapter implements FeatureFlagQueryPort, FeatureFlagPersistencePort {
-
-    public static final String RESOURCE_FILE_NAME = "feature-flags.txt";
+    private final ResourceFile resourceFile;
     private final FlagFileReader flagFileReader;
 
-    public TextFileFeatureFlagAdapter() {
-        this.flagFileReader = new FlagFileReader(RESOURCE_FILE_NAME);
+    public TextFileFeatureFlagAdapter(ResourceFile resourceFile) {
+        this.resourceFile = resourceFile;
+        this.flagFileReader = new FlagFileReader(resourceFile.name);
     }
 
     @Override
@@ -35,8 +35,8 @@ public class TextFileFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
     }
 
     @Override
-    public List<Flag> findFlagsByType(Flag.FlagType flagType) {
-        return flagFileReader.readFlags().byType(flagType);
+    public List<Flag> findFlagsByType(Flag.Type type) {
+        return flagFileReader.readFlags().byType(type);
     }
 
     @Override
@@ -49,7 +49,7 @@ public class TextFileFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
         throw new UnsupportedOperationException("Updates not allowed on disabled-database profile");
     }
 
-    class FlagFileReader {
+    static class FlagFileReader {
 
         private final String fileName;
         private final ObjectMapper objectMapper;
@@ -102,7 +102,7 @@ public class TextFileFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
         }
     }
 
-    class FlagCollection {
+    static class FlagCollection {
 
         private final List<Flag> flags;
 
@@ -114,18 +114,20 @@ public class TextFileFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
             return new ArrayList<>(flags);
         }
 
-        List<Flag> byType(Flag.FlagType type) {
+        List<Flag> byType(Flag.Type type) {
             return flags.stream()
-                        .filter(f -> f.getFlagType() == type)
+                        .filter(f -> f.getType() == type)
                         .toList();
         }
 
         Optional<Flag> byName(String name) {
             return flags.stream()
-                        .filter(f -> f.getFlagName().equalsIgnoreCase(name))
+                        .filter(f -> f.getName().equalsIgnoreCase(name))
                         .findFirst();
         }
     }
+
+    public record ResourceFile(String name) {}
 }
 
 

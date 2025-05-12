@@ -5,12 +5,12 @@ import java.util.Map;
 public class FlagDTO {
 
     private Long id;
-    private String flagName;
-    private FlagDTO.FlagType flagType;
+    private String name;
+    private FlagDTO.FlagType type;
     private FlagDTO.State state;
     private String defaultVariant;
     private String targeting;
-    private Map<String, String> variants;
+    private Map<String, Object> variants;
 
     public enum FlagType {
         BOOLEAN, STRING, NUMBER, OBJECT
@@ -29,21 +29,21 @@ public class FlagDTO {
         return this;
     }
 
-    public String getFlagName() {
-        return flagName;
+    public String getName() {
+        return name;
     }
 
-    public FlagDTO setFlagName(String flagName) {
-        this.flagName = flagName;
+    public FlagDTO setName(String name) {
+        this.name = name;
         return this;
     }
 
-    public FlagType getFlagType() {
-        return flagType;
+    public FlagType getType() {
+        return type;
     }
 
-    public FlagDTO setFlagType(FlagType flagType) {
-        this.flagType = flagType;
+    public FlagDTO setType(FlagType type) {
+        this.type = type;
         return this;
     }
 
@@ -74,11 +74,11 @@ public class FlagDTO {
         return this;
     }
 
-    public Map<String, String> getVariants() {
+    public Map<String, Object> getVariants() {
         return variants;
     }
 
-    public FlagDTO setVariants(Map<String, String> variants) {
+    public FlagDTO setVariants(Map<String, Object> variants) {
         this.variants = variants;
         return this;
     }

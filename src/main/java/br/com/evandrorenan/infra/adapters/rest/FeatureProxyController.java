@@ -1,5 +1,6 @@
 package br.com.evandrorenan.infra.adapters.rest;
 
+import br.com.evandrorenan.domain.model.ProxyRequestContext;
 import br.com.evandrorenan.domain.ports.RequestForwardingService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,6 @@ public class FeatureProxyController {
             HttpEntity<String> httpEntity,
             @PathVariable("featureFlagName") String featureFlagName) {
 
-        return requestProxy.forward(featureFlagName, request, httpEntity);
+        return requestProxy.forward(new ProxyRequestContext(featureFlagName, request, httpEntity));
     }
 }
