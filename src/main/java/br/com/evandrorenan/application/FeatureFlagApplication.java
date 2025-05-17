@@ -1,7 +1,6 @@
 package br.com.evandrorenan.application;
 
 import br.com.featureflagsdkjava.infra.annotations.EnableFeatureFlag;
-import lombok.Generated;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -20,7 +19,6 @@ public class FeatureFlagApplication {
      *
      * @param args command-line arguments passed to the application
      */
-    @Generated
     public static void main(String[] args) {
         SpringApplication.run(FeatureFlagApplication.class, args);
     }
