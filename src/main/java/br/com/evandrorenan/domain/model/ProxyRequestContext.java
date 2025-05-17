@@ -23,10 +23,6 @@ public record ProxyRequestContext (
         this(featureFlagName, RequestContext.from(request, httpEntity));
     }
 
-    public String getDecodedUrlParam() {
-        return new String(Base64.getUrlDecoder().decode(featureFlagName), StandardCharsets.UTF_8);
-    }
-
     public String getHttpMethod() {
         return requestContext.method();
     }
@@ -37,10 +33,6 @@ public record ProxyRequestContext (
 
     public HttpHeaders getRequestHeaders() {
         return requestContext.headers();
-    }
-
-    public Map<String, String> getRequestHeadersMap() {
-        return requestContext.headers().asSingleValueMap();
     }
 
     public byte[] getRequestBody() {

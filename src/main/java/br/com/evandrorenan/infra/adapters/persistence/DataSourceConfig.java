@@ -3,6 +3,7 @@ package br.com.evandrorenan.infra.adapters.persistence;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
@@ -19,32 +20,38 @@ import javax.sql.DataSource;
 @Profile("!disabled-database")
 public class DataSourceConfig {
 
-    @Value("${spring.datasource.url}")
-    private String jdbcUrl;
 
-    @Value("${spring.datasource.username}")
-    private String username;
+    private final String jdbcUrl;
+    private final String username;
+    private final String password;
+    private final int maximumPoolSize;
+    private final int minimumIdle;
+    private final int maxLifetime;
+    private final int idleTimeout;
+    private final int connectionTimeout;
+    private final String poolName;
 
-    @Value("${spring.datasource.password}")
-    private String password;
-
-    @Value("${spring.datasource.hikari.maximum-pool-size:10}")
-    private int maximumPoolSize;
-
-    @Value("${spring.datasource.hikari.minimum-idle:5}")
-    private int minimumIdle;
-
-    @Value("${spring.datasource.hikari.idle-timeout:30000}")
-    private int idleTimeout;
-
-    @Value("${spring.datasource.hikari.max-lifetime:1800000}")
-    private int maxLifetime;
-
-    @Value("${spring.datasource.hikari.connection-timeout:30000}")
-    private int connectionTimeout;
-
-    @Value("${spring.datasource.hikari.pool-name:HikariCP}")
-    private String poolName;
+    @Autowired
+    public DataSourceConfig(
+        @Value("${spring.datasource.url}")                             String jdbcUrl,
+        @Value("${spring.datasource.username}")                        String username,
+        @Value("${spring.datasource.password}")                        String password,
+        @Value("${spring.datasource.hikari.maximum-pool-size:10}")     int maximumPoolSize,
+        @Value("${spring.datasource.hikari.minimum-idle:5}")           int minimumIdle,
+        @Value("${spring.datasource.hikari.idle-timeout:30000}")       int idleTimeout,
+        @Value("${spring.datasource.hikari.max-lifetime:1800000}")     int maxLifetime,
+        @Value("${spring.datasource.hikari.connection-timeout:30000}") int connectionTimeout,
+        @Value("${spring.datasource.hikari.pool-name:HikariCP}")       String poolName) {
+        this.jdbcUrl = jdbcUrl;
+        this.username = username;
+        this.password = password;
+        this.maximumPoolSize = maximumPoolSize;
+        this.minimumIdle = minimumIdle;
+        this.idleTimeout = idleTimeout;
+        this.maxLifetime = maxLifetime;
+        this.connectionTimeout = connectionTimeout;
+        this.poolName = poolName;
+    }
 
     @Bean
     public DataSource dataSource() {

@@ -13,7 +13,6 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Builder
 @AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Table(name = "flags")
 public class FlagDAO {
