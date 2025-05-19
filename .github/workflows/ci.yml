@@ -7,160 +7,69 @@ on:
     branches: [ "main" ]
 
 jobs:
-  setup:
+  build:
     runs-on: self-hosted
-    outputs:
-      feature_flag_sdk_version: ${{ steps.extract_sdk_version.outputs.sdk_version }}
-      feature_flag_version: ${{ steps.extract_version.outputs.version }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
       - name: Extract feature-flag-sdk-springboot version from pom.xml
         id: extract_sdk_version
         run: |
           VERSION=$(grep -A 1 '<artifactId>feature-flag-sdk-springboot</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
-          echo "sdk_version=$VERSION" >> $GITHUB_OUTPUT
           echo "FEATURE_FLAG_SDK_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Feature flag SDK version: $VERSION"
+
+      - name: Cache feature-flag-sdk-springboot JAR
+        uses: actions/cache@v3
+        with:
+          path: feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar
+          key: ${{ runner.os }}-sdk-${{ env.FEATURE_FLAG_SDK_VERSION }}
+
+      - name: Download JAR from GitHub Packages
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -L "https://maven.pkg.github.com/evandrorenan/feature-flag-sdk-springboot/br/com/evandrorenan/feature-flag-sdk-springboot/${{ env.FEATURE_FLAG_SDK_VERSION }}/feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -o "feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar"
+
+      - name: Install JAR to Maven Local Repository
+        run: |
+          mvn install:install-file -Dfile=feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar \
+            -DgroupId=br.com.evandrorenan \
+            -DartifactId=feature-flag-sdk-springboot \
+            -Dversion=${{ env.FEATURE_FLAG_SDK_VERSION }} \
+            -Dpackaging=jar          
+
+      - name: Build and compile with Maven
+        run: mvn clean install -DskipTests=true
+
+#      - name: Run tests with JUnit
+#        run: mvn test
 
       - name: Extract feature-flag version from pom.xml
         id: extract_version
         run: |
           VERSION=$(grep -A 1 '<artifactId>feature-flag</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "FEATURE_FLAG_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Feature flag version: $VERSION"
-
-  prepare_dependencies:
-    needs: setup
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: maven
-          cache-dependency-path: '**/pom.xml'
-
-      - name: Cache feature-flag-sdk-springboot JAR
-        id: cache-sdk
-        uses: actions/cache@v3
-        with:
-          path: feature-flag-sdk-springboot-${{ needs.setup.outputs.feature_flag_sdk_version }}-jar-with-dependencies.jar
-          key: ${{ runner.os }}-sdk-${{ needs.setup.outputs.feature_flag_sdk_version }}
-
-      - name: Download JAR from GitHub Packages
-        if: steps.cache-sdk.outputs.cache-hit != 'true'
-        run: |
-          curl -L "https://maven.pkg.github.com/evandrorenan/feature-flag-sdk-springboot/br/com/evandrorenan/feature-flag-sdk-springboot/${{ needs.setup.outputs.feature_flag_sdk_version }}/feature-flag-sdk-springboot-${{ needs.setup.outputs.feature_flag_sdk_version }}-jar-with-dependencies.jar" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -o "feature-flag-sdk-springboot-${{ needs.setup.outputs.feature_flag_sdk_version }}-jar-with-dependencies.jar"
-
-      - name: Install JAR to Maven Local Repository
-        run: |
-          mvn install:install-file -Dfile=feature-flag-sdk-springboot-${{ needs.setup.outputs.feature_flag_sdk_version }}-jar-with-dependencies.jar \
-            -DgroupId=br.com.evandrorenan \
-            -DartifactId=feature-flag-sdk-springboot \
-            -Dversion=${{ needs.setup.outputs.feature_flag_sdk_version }} \
-            -Dpackaging=jar
-
-  build:
-    needs: [setup, prepare_dependencies]
-    runs-on: self-hosted
-    outputs:
-      jar_path: target/feature-flag-${{ needs.setup.outputs.feature_flag_version }}.jar
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: maven
-          cache-dependency-path: '**/pom.xml'
-
-      - name: Build and compile with Maven
-        run: mvn -B clean install -DskipTests=true
-
-      - name: Verify JAR was created
-        run: |
-          ls -la target/
-          echo "Checking for JAR file: target/feature-flag-${{ needs.setup.outputs.feature_flag_version }}.jar"
-          if [ ! -f "target/feature-flag-${{ needs.setup.outputs.feature_flag_version }}.jar" ]; then
-            echo "Error: JAR file not found!"
-            exit 1
-          fi
-
-      - name: Cache build artifacts
-        uses: actions/cache@v3
-        with:
-          path: target/
-          key: ${{ runner.os }}-build-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-build-
-
-  test:
-    needs: [setup, build]
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: maven
-          cache-dependency-path: '**/pom.xml'
-
-      - name: Run tests with JUnit
-        run: mvn -B test
-        # Note: Uncommented the test step that was commented in the original file
-
-  package:
-    needs: [setup, test, build]
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Restore build artifacts
-        uses: actions/cache@v3
-        with:
-          path: target/
-          key: ${{ runner.os }}-build-${{ github.sha }}
-
-      - name: Verify JAR exists before Docker build
-        run: |
-          ls -la target/
-          if [ ! -f "target/feature-flag-${{ needs.setup.outputs.feature_flag_version }}.jar" ]; then
-            echo "Error: JAR file not found! Build might have failed or cache not restored correctly."
-            exit 1
-          fi
-
-      - name: Prepare Dockerfile
-        run: |
-          sed -i "s/__VERSION__/${{ needs.setup.outputs.feature_flag_version }}/g" Dockerfile
-          # Ensure the Dockerfile references the correct JAR file name
-          if grep -q "feature-flag-__VERSION__.jar" Dockerfile; then
-            echo "Dockerfile already using variable for JAR filename"
-          elif grep -q "feature-flag-[0-9.]*.jar" Dockerfile; then
-            sed -i "s/feature-flag-[0-9.]*\.jar/feature-flag-${{ needs.setup.outputs.feature_flag_version }}.jar/g" Dockerfile
-          fi
-          cat Dockerfile
+          sed -i "s/__VERSION__/$VERSION/g" Dockerfile    
 
       - name: Clean up Docker configuration
         run: |
@@ -170,28 +79,13 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ needs.setup.outputs.feature_flag_version }} .
-
-  publish:
-    needs: [setup, package]
-    runs-on: self-hosted
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-
-    steps:
-      - name: Login to Docker Hub
-        run: |
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} .
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ needs.setup.outputs.feature_flag_version }}
+          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }}
 
-  deploy:
-    needs: [setup, publish]
-    runs-on: self-hosted
-    if: github.ref == 'refs/heads/main'
-
-    steps:
       - name: Setup KUBECONFIG
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
@@ -202,27 +96,5 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ needs.setup.outputs.feature_flag_version }} --record
+          kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
           kubectl rollout status deployment/feature-flag
-
-  cleanup:
-    needs: [setup]
-    runs-on: self-hosted
-    if: always()
-
-    steps:
-      - name: Remove local Docker images
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-        run: |
-          docker image prune -f
-
-      - name: Clean workspace
-        run: |
-          rm -f kubeconfig.yaml || true
-          docker logout || true
-
-      # Keep the Maven cache but clean up unnecessary files
-      - name: Clean Maven temporary files
-        run: |
-          find ~/.m2 -name "*.lastUpdated" -delete || true
-          find ~/.m2 -name "resolver-status.properties" -delete || true
