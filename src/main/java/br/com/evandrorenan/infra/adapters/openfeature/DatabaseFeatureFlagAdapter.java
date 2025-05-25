@@ -9,6 +9,7 @@ import br.com.featureflagsdkjava.domain.ports.FeatureFlagQueryPort;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,8 +17,9 @@ import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-@Service("database")
+@Service("databaseFeatureFlagQuery")
 @Primary
+@Profile("!disabled-database")
 public class DatabaseFeatureFlagAdapter implements FeatureFlagQueryPort, FeatureFlagPersistencePort {
 
     private final FeatureFlagRepository repo;
@@ -38,8 +40,8 @@ public class DatabaseFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
     }
 
     @Override
-    public List<Flag> findFlagsByType(Flag.FlagType flagType) {
-        return mapper.toFlagListFromDAO(repo.findByFlagType(FlagDAO.FlagType.valueOf(flagType.name())));
+    public List<Flag> findFlagsByType(Flag.Type type) {
+        return mapper.toFlagListFromDAO(repo.findByFlagType(FlagDAO.Type.valueOf(type.name())));
     }
 
     @CircuitBreaker(name = "databaseFeatureFlagAdapter", fallbackMethod = "findFlagByNameFallback")
@@ -50,6 +52,7 @@ public class DatabaseFeatureFlagAdapter implements FeatureFlagQueryPort, Feature
         return Optional.of(mapper.toFlag(optFlagDAO.get()));
     }
 
+    @SuppressWarnings("unused")
     public Optional<FlagDAO> findFlagByNameFallback(String flagName, Throwable e) {
         log.error("Fallback triggered when trying to fetch flag {} due to: {}", flagName, e);
         return Optional.empty();

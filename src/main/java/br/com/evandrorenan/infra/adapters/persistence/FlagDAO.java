@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
@@ -14,7 +13,6 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Builder
 @AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Table(name = "flags")
 public class FlagDAO {
@@ -24,11 +22,11 @@ public class FlagDAO {
     private Long id;
 
     @Column(name = "flag_name", nullable = false, unique = true)
-    private String flagName;
+    private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "flag_type", nullable = false)
-    private FlagType flagType;
+    private Type type;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false)
@@ -44,9 +42,9 @@ public class FlagDAO {
     @CollectionTable(name = "variants", joinColumns = @JoinColumn(name = "flag_id"))
     @MapKeyColumn(name = "variant_key")
     @Column(name = "variant_value")
-    private Map<String, String> variants;
+    private Map<String, Object> variants;
 
-    public enum FlagType {
+    public enum Type {
         BOOLEAN, STRING, NUMBER, OBJECT
     }
 
@@ -58,62 +56,28 @@ public class FlagDAO {
         return id;
     }
 
-    public FlagDAO setId(Long id) {
-        this.id = id;
-        return this;
+    public String getName() {
+        return name;
     }
 
-    public String getFlagName() {
-        return flagName;
-    }
-
-    public FlagDAO setFlagName(String flagName) {
-        this.flagName = flagName;
-        return this;
-    }
-
-    public FlagType getFlagType() {
-        return flagType;
-    }
-
-    public FlagDAO setFlagType(FlagType flagType) {
-        this.flagType = flagType;
-        return this;
+    public Type getType() {
+        return type;
     }
 
     public State getState() {
         return state;
     }
 
-    public FlagDAO setState(State state) {
-        this.state = state;
-        return this;
-    }
-
     public String getDefaultVariant() {
         return defaultVariant;
-    }
-
-    public FlagDAO setDefaultVariant(String defaultVariant) {
-        this.defaultVariant = defaultVariant;
-        return this;
     }
 
     public String getTargeting() {
         return targeting;
     }
 
-    public FlagDAO setTargeting(String targeting) {
-        this.targeting = targeting;
-        return this;
-    }
-
-    public Map<String, String> getVariants() {
+    public Map<String, Object> getVariants() {
         return variants;
     }
 
-    public FlagDAO setVariants(Map<String, String> variants) {
-        this.variants = variants;
-        return this;
-    }
 }

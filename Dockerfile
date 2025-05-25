@@ -4,10 +4,10 @@ FROM registry.access.redhat.com/ubi8/openjdk-17-runtime:1.20
 LABEL name="feature-flag"
 
 # Copy the application JAR file to the container
-COPY --chown=185:0 target/feature-flag-1.0.0.jar /deployments/app.jar
+COPY --chown=185:0 target/feature-flag-__VERSION__.jar /deployments/app.jar
 
 # Expose the port the application runs on
 EXPOSE 8080
 
-# Set the default command to run the application
+# Set the default command to evaluateAllFeatureFlagsOfType the application
 CMD ["java", "-jar", "/deployments/app.jar"]

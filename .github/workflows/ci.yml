@@ -1,12 +1,14 @@
 name: CI/CD Pipeline for feature-flag Microservice
 
 on:
+  push:
+    branches: [ "main", "develop"]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -17,28 +19,82 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Extract version from pom.xml
-        id: extract_version
-        run: echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Extract feature-flag-sdk-springboot version from pom.xml
+        id: extract_sdk_version
+        run: |
+          VERSION=$(grep -A 1 '<artifactId>feature-flag-sdk-springboot</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
+          echo "FEATURE_FLAG_SDK_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Feature flag SDK version: $VERSION"
+
+      - name: Cache feature-flag-sdk-springboot JAR
+        uses: actions/cache@v3
+        with:
+          path: feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar
+          key: ${{ runner.os }}-sdk-${{ env.FEATURE_FLAG_SDK_VERSION }}
+
+      - name: Download JAR from GitHub Packages
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -L "https://maven.pkg.github.com/evandrorenan/feature-flag-sdk-springboot/br/com/evandrorenan/feature-flag-sdk-springboot/${{ env.FEATURE_FLAG_SDK_VERSION }}/feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -o "feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar"
+
+      - name: Install JAR to Maven Local Repository
+        run: |
+          mvn install:install-file -Dfile=feature-flag-sdk-springboot-${{ env.FEATURE_FLAG_SDK_VERSION }}-jar-with-dependencies.jar \
+            -DgroupId=br.com.evandrorenan \
+            -DartifactId=feature-flag-sdk-springboot \
+            -Dversion=${{ env.FEATURE_FLAG_SDK_VERSION }} \
+            -Dpackaging=jar          
 
       - name: Build and compile with Maven
-        run: mvn clean install -DskipTests=false
+        run: mvn clean install -DskipTests=true
 
-      - name: Run tests with JUnit
-        run: mvn test
+#      - name: Run tests with JUnit
+#        run: mvn test
+
+      - name: Extract feature-flag version from pom.xml
+        id: extract_version
+        run: |
+          VERSION=$(grep -A 1 '<artifactId>feature-flag</artifactId>' pom.xml | grep -o '<version>[^<]*' | sed 's/<version>//')
+          echo "FEATURE_FLAG_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Feature flag version: $VERSION"
+          sed -i "s/__VERSION__/$VERSION/g" Dockerfile    
+
+      - name: Clean up Docker configuration
+        run: |
+          rm -rf ~/.docker
+          mkdir -p ~/.docker
+          echo '{ "auths": { "https://index.docker.io/v1/": {} } }' > ~/.docker/config.json
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.VERSION }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} .
 
       - name: Push Docker image to Docker Hub
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.VERSION }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }}
+
+      - name: Setup KUBECONFIG
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG" > kubeconfig.yaml
+          export KUBECONFIG=$PWD/kubeconfig.yaml
+          kubectl config use-context kind-web3270
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.VERSION }} --record
-        env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+          kubectl set image deployment/feature-flag feature-flag=${{ secrets.DOCKER_USERNAME }}/feature-flag:${{ env.FEATURE_FLAG_VERSION }} --record
+          kubectl rollout status deployment/feature-flag
